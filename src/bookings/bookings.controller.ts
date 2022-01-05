@@ -70,6 +70,7 @@ export class BookingsController{
 
     @Patch('startEndTrip/:id')
     async startEndTrip(@Param('id') bookingId: string, @Body('status') status:string, @Body('userId') userId:string){
+        console.log(bookingId);
         const returnValue = await this.bookingsService.startEndTrip(bookingId, status, userId);
         return {message: returnValue};
 

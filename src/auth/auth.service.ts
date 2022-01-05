@@ -30,6 +30,8 @@ export class AuthService{
             throw new NotFoundException('Could not find user.');
 
         }
+
+        console.log(userType.type);
         return userType.type;
     }
 

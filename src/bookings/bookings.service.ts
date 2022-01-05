@@ -1,6 +1,7 @@
 import { forwardRef, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { InjectModel } from "@nestjs/mongoose";
+import console from "console";
 import { Model } from "mongoose";
 import { AuthService } from "src/auth/auth.service";
 import { Booking } from "./booking.model";
