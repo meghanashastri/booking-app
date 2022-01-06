@@ -1,7 +1,9 @@
 import { forwardRef, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { InjectModel } from "@nestjs/mongoose";
+import { SchedulerRegistry } from "@nestjs/schedule";
 import console from "console";
+import { CronJob, job } from "cron";
 import { Model } from "mongoose";
 import { AuthService } from "src/auth/auth.service";
 import { Booking } from "./booking.model";
@@ -9,7 +11,8 @@ import { Booking } from "./booking.model";
 @Injectable()
 export class BookingsService{
     constructor(@InjectModel('Booking') private readonly bookingModel: Model<Booking>, 
-    private authService: AuthService){}
+    private authService: AuthService, 
+    private schedulerRegistry: SchedulerRegistry){}
 
     async insertBooking(status: string, client: string, created_by: string, from_hub: string, to_hub: string){
         const type = await this.authService.findUserType(client);
@@ -17,6 +20,7 @@ export class BookingsService{
             const newBooking = new this.bookingModel({status: status, client: client, created_by: created_by, 
                 from_hub:from_hub, to_hub: to_hub});
             const result = await newBooking.save();
+            this.addCronJob(result.id);
             return result.id as string;
         }else{
             return 'Only Client can create a booking.'
@@ -109,4 +113,18 @@ export class BookingsService{
         }
         return booking;
     }
+
+    async addCronJob(bookingId: string) {
+        const job = new CronJob("*/15 * * * *", async () => {
+            const booking = await this.findBooking(bookingId);
+            if(booking.status === 'created'){
+                this.updateBooking(bookingId, "expired", null, null,null,null);
+            }
+        });
+
+        this.schedulerRegistry.addCronJob('statusCronJob', job);
+        job.start();
+
+    }
+      
 }
