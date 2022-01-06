@@ -21,6 +21,7 @@ export class AssignBookingsService{
                 driverId: driverId,
                 bookingId: bookingId
             });
+            const updateStatus = await this.bookingService.updateBooking(bookingId, "assigned", null, null, null, null);
             const result = await applyBooking.save();
             return 'Booking applied successfully.'
         }else{
