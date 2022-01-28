@@ -12,6 +12,10 @@ export class BookingsController{
     async postBooking(@Body('status') status: string, @Body('client') client:string, @Body('created_by') created_by: string,
     @Body('from_hub') from_hub: string, @Body('to_hub') to_hub: string) {
         console.log(status);
+        const jobs = await this.bookingsService.getCrons();
+        if(jobs.size>0){
+            await this.bookingsService.deleteCron('statusCronJob');  
+        }
         const returnValue = await this.bookingsService.insertBooking(status, client, created_by, from_hub, to_hub);
         return {id: returnValue};
     }

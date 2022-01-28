@@ -126,5 +126,13 @@ export class BookingsService{
         job.start();
 
     }
+
+    async deleteCron(name: string) {
+        this.schedulerRegistry.deleteCronJob(name);
+      }
+
+    async getCrons() {
+        return this.schedulerRegistry.getCronJobs();        
+      }
       
 }
