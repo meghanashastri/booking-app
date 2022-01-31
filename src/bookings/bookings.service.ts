@@ -9,22 +9,24 @@ import { AuthService } from "src/auth/auth.service";
 import { Booking } from "./booking.model";
 
 @Injectable()
-export class BookingsService{
-    constructor(@InjectModel('Booking') private readonly bookingModel: Model<Booking>, 
-    private authService: AuthService, 
-    private schedulerRegistry: SchedulerRegistry){}
+export class BookingsService {
+    constructor(@InjectModel('Booking') private readonly bookingModel: Model<Booking>,
+        private authService: AuthService,
+        private schedulerRegistry: SchedulerRegistry) { }
 
-    async insertBooking(status: string, client: string, created_by: string, from_hub: string, to_hub: string){
+    async insertBooking(status: string, client: string, created_by: string, from_hub: string, to_hub: string) {
         const type = await this.authService.findUserType(client);
-        if(type === 'Client'){
-            const newBooking = new this.bookingModel({status: status, client: client, created_by: created_by, 
-                from_hub:from_hub, to_hub: to_hub});
+        if (type === 'Client') {
+            const newBooking = new this.bookingModel({
+                status: status, client: client, created_by: created_by,
+                from_hub: from_hub, to_hub: to_hub
+            });
             const result = await newBooking.save();
             this.addCronJob(result.id);
             return result.id as string;
-        }else{
+        } else {
             return 'Only Client can create a booking.'
-        }  
+        }
     }
 
     /*async getAllBookings(){
@@ -40,74 +42,74 @@ export class BookingsService{
         return this.bookingModel.count(options).exec();
     }
 
-    async getBooking(bookingId: string){
+    async getBooking(bookingId: string) {
         const booking = await this.findBooking(bookingId);
-        return {id: booking.id, status: booking.status, created_by: booking.created_by};
+        return { id: booking.id, status: booking.status, created_by: booking.created_by };
     }
 
-    async updateBooking(bookingId: string, status: string, client: string, created_by: string, 
-        from_hub: string, to_hub: string) : Promise<string>{
+    async updateBooking(bookingId: string, status: string, client: string, created_by: string,
+        from_hub: string, to_hub: string): Promise<string> {
         const booking = await this.findBooking(bookingId);
 
         const type = await this.authService.findUserType(booking.client);
 
-        if(type === 'Client'){
+        if (type === 'Client') {
 
-        if(status && status!=='in-progress' || status !== 'completed'){
-            booking.status = status;
-        }
-        if(client){
-            booking.client = client;
-        }
-        if(created_by){
-            booking.created_by = created_by;
-        }
-        if(from_hub){
-            booking.from_hub = from_hub;
-        }
-        if(to_hub){
-            booking.to_hub = to_hub;
-        }
+            if (status && status !== 'in-progress' || status !== 'completed') {
+                booking.status = status;
+            }
+            if (client) {
+                booking.client = client;
+            }
+            if (created_by) {
+                booking.created_by = created_by;
+            }
+            if (from_hub) {
+                booking.from_hub = from_hub;
+            }
+            if (to_hub) {
+                booking.to_hub = to_hub;
+            }
 
-        booking.save();
-        return 'Booking updated'
-    }else{
-        return 'Only Client can update booking.'
-    }  
+            booking.save();
+            return 'Booking updated'
+        } else {
+            return 'Only Client can update booking.'
+        }
     }
 
-    async startEndTrip(bookingId: string, status: string, userId: string) : Promise<string>{
+    async startEndTrip(bookingId: string, status: string, userId: string): Promise<string> {
         const booking = await this.findBooking(bookingId);
         const type = await this.authService.findUserType(userId);
 
-        if(type === 'Partner'){
-            if(status && status === 'in-progress' || status === 'completed'){
+        if (type === 'Partner') {
+            if (status && status === 'in-progress' || status === 'completed') {
                 booking.status = status;
             }
             booking.save();
             return 'Booking updated';
 
-        }else{
+        } else {
             return 'Only Partner can start and stop trip';
         }
     }
 
-    async deleteBooking(bookingId: string){
-       const result = await this.bookingModel.deleteOne({_id: bookingId}).exec();
-       if(!result.acknowledged){
-           throw new NotFoundException('Could not find booking.');  
-       }
+    async deleteBooking(bookingId: string) {
+        const result = await this.bookingModel.deleteOne({ _id: bookingId }).exec();
+        if (!result.acknowledged) {
+            throw new NotFoundException('Could not find booking.');
+        }
     }
 
-    async findBooking(bookingId: string): Promise<Booking>{
+    async findBooking(bookingId: string): Promise<Booking> {
         let booking;
         try {
-        booking = await this.bookingModel.findById(bookingId).exec();
+            booking = await this.bookingModel.findById(bookingId).exec();
         } catch (error) {
-            throw new NotFoundException('Could not find booking.');   
+            throw new NotFoundException('Could not find booking.');
         }
 
-        if(!booking){
+        if (!booking) {
             throw new NotFoundException('Could not find booking.');
 
         }
@@ -117,8 +119,8 @@ export class BookingsService{
     async addCronJob(bookingId: string) {
         const job = new CronJob("*/15 * * * *", async () => {
             const booking = await this.findBooking(bookingId);
-            if(booking.status === 'created'){
-                this.updateBooking(bookingId, "expired", null, null,null,null);
+            if (booking.status === 'created') {
+                this.updateBooking(bookingId, "expired", null, null, null, null);
             }
         });
 
@@ -127,12 +129,15 @@ export class BookingsService{
 
     }
 
-    async deleteCron(name: string) {
-        this.schedulerRegistry.deleteCronJob(name);
-      }
+    async deleteCronJob() {
+        const job = new CronJob("* * * * * *", async () => {
+            const jobs = this.schedulerRegistry.getCronJobs();
+            if (jobs.size > 0) {
+                this.schedulerRegistry.deleteCronJob("statusCronJob");
+            }
+        });
+        this.schedulerRegistry.addCronJob('deleteCronJob', job);
+        job.start();
+    }
 
-    async getCrons() {
-        return this.schedulerRegistry.getCronJobs();        
-      }
-      
 }
