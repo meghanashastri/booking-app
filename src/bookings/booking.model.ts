@@ -44,4 +44,5 @@ export interface Booking extends mongoose.Document{
     to_hub: string;
     status: string;
     created_by: string;
+    created_at:string;
 }

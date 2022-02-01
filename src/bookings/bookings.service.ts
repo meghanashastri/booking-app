@@ -7,9 +7,16 @@ import { CronJob, job } from "cron";
 import { Model } from "mongoose";
 import { AuthService } from "src/auth/auth.service";
 import { Booking } from "./booking.model";
+import date from 'date-and-time';
 
 @Injectable()
 export class BookingsService {
+
+    onModuleInit(){
+        this.expireCronJob();
+      }
+      
+
     constructor(@InjectModel('Booking') private readonly bookingModel: Model<Booking>,
         private authService: AuthService,
         private schedulerRegistry: SchedulerRegistry) { }
@@ -22,17 +29,17 @@ export class BookingsService {
                 from_hub: from_hub, to_hub: to_hub
             });
             const result = await newBooking.save();
-            this.addCronJob(result.id);
+            //  this.addCronJob(result.id);
             return result.id as string;
         } else {
             return 'Only Client can create a booking.'
         }
     }
 
-    /*async getAllBookings(){
+    async getAllBookings() {
         const bookings = await this.bookingModel.find().exec();
         return bookings as Booking[];
-    }*/
+    }
 
     find(options) {
         return this.bookingModel.find(options);
@@ -116,20 +123,20 @@ export class BookingsService {
         return booking;
     }
 
-    async addCronJob(bookingId: string) {
-        const job = new CronJob("*/15 * * * *", async () => {
-            const booking = await this.findBooking(bookingId);
-            if (booking.status === 'created') {
-                this.updateBooking(bookingId, "expired", null, null, null, null);
-            }
-        });
+    //async addCronJob(bookingId: string) {
+    //   const job = new CronJob("*/15 * * * *", async () => {
+    //       const booking = await this.findBooking(bookingId);
+    //       if (booking.status === 'created') {
+    //           this.updateBooking(bookingId, "expired", null, null, null, null);
+    //        }
+    //    });
 
-        this.schedulerRegistry.addCronJob('statusCronJob', job);
-        job.start();
+    //   this.schedulerRegistry.addCronJob('statusCronJob', job);
+    //    job.start();
 
-    }
+    //}
 
-    async deleteCronJob() {
+    /* async deleteCronJob() {
         const job = new CronJob("* * * * * *", async () => {
             const jobs = this.schedulerRegistry.getCronJobs();
             if (jobs.size > 0) {
@@ -138,6 +145,22 @@ export class BookingsService {
         });
         this.schedulerRegistry.addCronJob('deleteCronJob', job);
         job.start();
+    } */
+
+    async expireCronJob() {
+        const presentTime = new Date();
+    
+        const job = new CronJob("* * * * * *", async () => {
+            const bookings = await this.getAllBookings();
+            bookings.forEach((booking) => {
+                if (date.subtract(presentTime, booking.created_at).toMinutes() > 15 && booking.status === 'created') {                    
+                    this.updateBooking(booking.id, "expired", null, null, null, null);
+                }
+            })
+        });
+        this.schedulerRegistry.addCronJob('expireCronJob', job);
+        job.start();
+
     }
 
 }
