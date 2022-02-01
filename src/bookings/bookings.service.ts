@@ -12,10 +12,10 @@ import date from 'date-and-time';
 @Injectable()
 export class BookingsService {
 
-    onModuleInit(){
+    onModuleInit() {
         this.expireCronJob();
-      }
-      
+    }
+
 
     constructor(@InjectModel('Booking') private readonly bookingModel: Model<Booking>,
         private authService: AuthService,
@@ -147,13 +147,16 @@ export class BookingsService {
         job.start();
     } */
 
+    async getBookingsToExpire() {
+        const bookings = await this.bookingModel.find({ created_at: { $gte: new Date().getTime() - (15 * 60 * 1000) } }).exec();
+        return bookings as Booking[];
+    }
+
     async expireCronJob() {
-        const presentTime = new Date();
-    
         const job = new CronJob("* * * * * *", async () => {
-            const bookings = await this.getAllBookings();
+            const bookings = await this.getBookingsToExpire();
             bookings.forEach((booking) => {
-                if (date.subtract(presentTime, booking.created_at).toMinutes() > 15 && booking.status === 'created') {                    
+                if (booking.status === 'created') {
                     this.updateBooking(booking.id, "expired", null, null, null, null);
                 }
             })
